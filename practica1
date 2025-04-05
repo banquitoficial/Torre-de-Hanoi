@@ -1,0 +1,116 @@
+# Integrantes
+# Santiago Josué García Morales
+# Bryan Alejandro Villalpando Castillo 
+
+.text
+main:
+    addi s0, zero, 3      # N = 3 Numero de discos
+
+    
+    lui  s1, 0x10010       # Dirección base de la torre A
+    addi s1, s1, 0         # Torre A: 0x10010000
+    addi s2, s1, 4         # Torre B: 0x10010004
+    addi s3, s2, 4         # Torre C: 0x10010008
+    
+    slli t0, s0, 5         # Calcula el desplazamiento de memoria
+    add  s2, s2, t0        # Ajusta la direccion de la Torre B
+    add  s3, s3, t0        # Ajusta la direccion de la Torre C
+
+    addi t2, zero, 0x00    # Inicializacion de variables auxiliares
+    addi s10, zero, 0      # Contador de movimientos
+    addi s11, zero, 0x20   # Espaciado entre discos en memoria
+    addi t1, s0, -1        # n = N - 1 su uso es para las iteraciones
+    addi t0, zero, 0       # Contador
+    addi t5, zero, 0       # Desplazamiento
+
+# Este es un bucle que inicializa la Torre A
+for:
+    beq s0, t0, torre_hanoi   # Si t0 == s0, inicia la recursion de Torre de Hani
+    addi t1, t0, 1            # Incrementa el indice del disco
+    add  t2, zero, s1         # Direccion base de la Torre A
+    add  t4, t2, t5           # Calcula la direccion especifica del disco
+    sw   t1, 0(t4)            # Guarda el disco en memoria
+    addi t5, t5, 0x20         # Avanza en la memoria
+    addi t0, t0, 1            # Incrementa el contador
+    j    for                  # Se repite el bucle
+
+# Esto realiza la llamada a la función recursiva de la Torre de Hanoi
+jal ra, torre_hanoi
+j exit
+
+# Funcion recursiva de Torre de Hanoi
+torre_hanoi:
+    addi t0, zero, 1
+
+    # Condicion en la que si hay solo un disco,se movera directamente
+if:
+    bne  s0, t0, else
+    sw   zero, 0x0(s1)     # Remueve el disco de la torre de origen
+    add  s1, s1, s11       # Ajusta puntero de torre A
+    sub  s3, s3, s11       # Ajusta puntero de torre C
+    sw   s0, 0(s3)         # Mueve el disco a la torre destino
+    addi s10, s10, 1       # Incrementa el contador de movimientos
+    jalr ra                # Realiza el retorno
+
+# En esto es la parte recursiva
+else:
+    addi sp, sp, -4
+    sw   ra, 0x0(sp)       # Guarda el valor de "ra" en la pila
+    addi sp, sp, -4
+    sw   s0, 0x0(sp)       # Guarda s0 en la pila
+    addi s0, s0, -1        # Reduce el numero de discos
+
+ # Intercambia torres para la primera llamada recursiva
+    add  t1, s2, zero      # Guarda torre intermedia temporalmente
+    add  s2, s3, zero      # Torre intermedia toma el valor de torre destino
+    add  s3, t1, zero      # Torre destino toma el valor original de torre intermedia
+    jal  ra, torre_hanoi   # Llamada recursiva
+
+    # Restaura el orden original de las torres despues de la primera llamada
+    add t1, s2, zero
+    add s2, s3, zero
+    add s3, t1, zero
+
+    # Recupera los valores de pila para continuar
+    lw s0, 0x0(sp)
+    addi sp, sp, 4
+    lw ra, 0x0(sp)
+    addi sp, sp, 4
+
+    # Mueve el disco mas grande directamente desde torre origen a torre destino
+    sw zero, 0x0(s1)       # Elimina el disco de la torre de origen
+    add s1, s1, s11        # Ajusta puntero de torre origen
+    sub s3, s3, s11        # Ajusta puntero de torre destino
+    sw s0, 0x0(s3)         # Mueve el disco
+    addi s10, s10, 1       # Incrementa el contador de movimientos
+
+    # Segunda llamada recursiva: mueve los discos restantes al destino final
+    addi sp, sp, -4
+    sw ra, 0x0(sp)         # Guarda ra
+    addi sp, sp, -4
+    sw s0, 0x0(sp)         # Guarda s0
+    addi s0, s0, -1        # Decrementa numero de discos
+
+    # Intercambia torres para preparar segunda llamada recursiva
+    add t1, s1, zero
+    add s1, s2, zero
+    add s2, t1, zero
+
+    jal ra, torre_hanoi    # Llamada recursiva
+
+    # Restaura el orden original de las torres despues de la segunda llamada
+    add t1, s1, zero
+    add s1, s2, zero
+    add s2, t1, zero
+
+    # Recupera registros
+    lw s0, 0x0(sp)
+    addi sp, sp, 4
+    lw ra, 0x0(sp)
+    addi sp, sp, 4
+
+    jalr ra                # Retorna
+
+# Fin del programa
+exit:
+    j exit
